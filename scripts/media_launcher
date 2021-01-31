@@ -1,0 +1,36 @@
+#!/bin/bash
+media_dir=/mnt/misc-ssd/Anime
+declare -A saved
+declare -A tracked
+save() {
+        for i in $media_dir/*; do
+                saved["${i// /}"]=0
+        done;
+        for i in ${!saved[@]};do
+                echo -n "$i " >> $HOME/.medialist
+                echo ${saved["$i"]} >> $HOME/.medialist
+        done
+}
+
+retrieve() {
+        while IFS=' ' read -r title num; do
+                tracked[$title]=$num
+        done < $HOME/.medialist
+        for title in ${!retrieved[@]}; do
+                echo "$title ${retrieved[$title]}"
+        done;
+}
+
+main() {
+        #replace with script that gets media titles from specific directory based on recency
+        if [ ! -f $HOME/.medialist ]; then
+                save
+        fi
+        retrieve
+        mapfile -t media_titles < <(ls $media_dir)
+        selected="$(printf '%s\n' "${media_titles[@]}" | rofi -dmenu -i -p "Watch")"
+        echo "$selected"
+        find $media_dir/"$selected" -type f -name "*.mkv" | sort -g 
+}
+
+main "$@"
