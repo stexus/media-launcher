@@ -4,7 +4,7 @@ local utils = require('mp.utils')
 -- read json file if exists
 --      check folder where media is being played. grab ep and increment
 -- otherwise create one
-local media_list = os.getenv('HOME') .. '/.media_list.json'
+local media_list = os.getenv('HOME') .. '/.medialist.json'
 local title = utils.getcwd():match( "([^/]+)$" )
 
 
@@ -56,7 +56,7 @@ local function get_ep_order()
         })
     if result.status == 0 then
         titles = split(result.stdout, '\n')
-        return titles[filename] + 1
+        return titles[filename] 
     end
     return 0
 end
@@ -67,7 +67,7 @@ local handle_seek, handle_pause
 local function complete_ep()
     mp.unobserve_property(handle_pause)
     mp.unregister_event(handle_seek)
-    curr_list[title] = get_ep_order()
+    curr_list[title] = get_ep_order() + 1
     list.saveTable(media_list, curr_list)
 end
 
