@@ -3,29 +3,29 @@
 import sys
 from pathlib import Path
 import subprocess
+import json
 
 #given a media name
 
 #check if saved list exists, then read everything into a dictionary (i.e name to ep #)
 #if not, create a new file and import everything from media_dir at 0
 #media_list = Path.home() / '.medialist'
-media_list = Path.home() / '.testmedialist'
+medialist = Path.home() / '.medialist.json'
 selected = sys.argv[1]
 media_dir=Path(sys.argv[2])
+
+
 def get_ep_number(title):
     try:
-        with media_list.open(mode='r') as reader:
-            for line in reader.read().splitlines():
-                title = line[:-2]
-                if title == selected:
-                    return line[-1]
+        with medialist.open(mode='r') as jr:
+            data = json.load(jr)
+            return data[selected]
     except:
         #create .medialist in Path.home()
-        media_list.touch()
-        with media_list.open(mode='w') as writer:
-            for title in media_dir.iterdir():
-                if title.is_dir():
-                    writer.write(f'{title.name} 1\n')
+        medialist.touch()
+        with medialist.open(mode='w') as jw:
+            json.dump({selected: 1}, jw)
+            return 1
 
 def get_ep_title(ep, dir):
     #prioritize upper levels when finding
