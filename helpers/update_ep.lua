@@ -11,7 +11,7 @@ local title = utils.getcwd():match( "([^/]+)$" )
 -- JSON loading and saving
 local list = {}
 list.saveTable = function(path, v)
-    local file = io.open(path, "w")
+    local file = io.open(path, "w+")
     local contents = utils.format_json(v)
     file:write(contents)
     io.close(file)
@@ -23,7 +23,7 @@ list.loadTable = function(path)
     local file = io.open(path,"r")
     if file then
         local contents = file:read("*a")
-        myTable = utils.parse_json(contents);
+        myTable = utils.parse_json(contents) or {} 
         io.close(file)
         return myTable
     end
