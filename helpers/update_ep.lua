@@ -5,7 +5,7 @@ local utils = require('mp.utils')
 --      check folder where media is being played. grab ep and increment
 -- otherwise create one
 local media_list = os.getenv('HOME') .. '/.medialist.json'
-local title = utils.getcwd():match( "([^/]+)$" )
+local dir, title = utils.split_path(utils.getcwd())
 
 
 -- JSON loading and saving
@@ -23,11 +23,12 @@ list.loadTable = function(path)
     local file = io.open(path,"r")
     if file then
         local contents = file:read("*a")
-        myTable = utils.parse_json(contents) or {} 
+        myTable = utils.parse_json(contents) or {}
         io.close(file)
-        return myTable
+    else
+        list.saveTable(path)
     end
-    return nil
+    return myTable
 end
 
 
@@ -40,38 +41,61 @@ function split(s, sep)
     local pattern = string.format("([^%s]+)", sep)
     -- changing such that it is a dictionary
     local i = 0
-    string.gsub(s, pattern, function(c) fields[c] = i; i = i + 1 end)
-    
+    string.gsub(s, pattern, function(c) 
+        fields[#fields + 1] = c
+    end)
     return fields
 end
 
-local function get_ep_order()
-    local filename = mp.get_property('filename')
-    local commands = {'find', utils.getcwd(), '-type', 'f', '-name', '*.mkv', '-printf', "%f\n"}
-    local result = mp.command_native({
+local function subprocess(command, stdin)
+    return mp.command_native({
             name = 'subprocess',
             playback_only = false,
             capture_stdout = true,
-            args = commands
+            stdin_data = stdin,
+            args = command
         })
-    if result.status == 0 then
-        titles = split(result.stdout, '\n')
-        return titles[filename] 
+end
+local function get_ep_order()
+    -- using mostly bash to be absolutely consistent with python script
+    local filename = mp.get_property('filename')
+    local commands = {'find', utils.getcwd(), '-type', 'f', '-name', '*.mkv', '-printf', "%f\n"}
+    local result = subprocess(commands)
+    local line
+    if result.status == 0 then 
+        local sorted = subprocess({'sort'}, result.stdout)
+        line = subprocess({'grep', '-Fn', filename}, sorted.stdout)
+    end
+    if line.status == 0 then
+        local end_index = line.stdout:find(':')
+        local ep = line.stdout:sub(0, end_index - 1)
+        return tonumber(ep)
     end
     return 0
 end
 
 
-
-local handle_seek, handle_pause
-local function complete_ep()
+local handle_seek, handle_pause, timer
+local function kill_timer()
+    if timer then
+        timer:kill()
+        timer = nil
+        mp.msg.info('timer stopped')
+    end
+end
+local function killall()
+    kill_timer()
     mp.unobserve_property(handle_pause)
     mp.unregister_event(handle_seek)
-    curr_list[title] = get_ep_order() + 1
+end
+
+local function complete_ep()
+    mp.msg.info('episode completed')
+    killall()
+    curr_list[title] = get_ep_order()
     list.saveTable(media_list, curr_list)
 end
 
-local timer
 --increment and write to json when 85% passed or last chapter crossed
 --courtsey of @gim-
 local function start_timer()
@@ -80,20 +104,15 @@ local function start_timer()
     threshold = threshold * 0.85 
     local until_threshold = math.max(threshold - curr_time, 0)
     timer = mp.add_timeout(until_threshold, complete_ep)
-    mp.msg.info(until_threshold)
+    mp.msg.info('time left: ' .. until_threshold)
 end
 handle_pause = function(_, paused)
-    if paused and timer then
-        timer:kill()
-        timer = nil
-        mp.msg.info('timer stopped')
-    else
-        start_timer()
-    end
+    if paused then kill_timer()
+    else start_timer() end
 end
 
 handle_seek = function()
-    if timer then timer:kill(); timer = nil end
+    kill_timer()
     start_timer()
 end
 
@@ -101,7 +120,6 @@ end
 
 --prevent nil errors on startup pause property change
 local function file_load()
-    mp.msg.info('file loaded')
     mp.observe_property('pause', 'bool', handle_pause)
     mp.register_event('seek', handle_seek)
 end

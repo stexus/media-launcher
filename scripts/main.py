@@ -36,6 +36,7 @@ def get_title(ep):
     mkvs = sorted(list(curr_dir.glob('**/*.mkv')))
     print(mkvs)
     #opening next episode
+
     return mkvs[ep]
 
 ep = get_ep(selected)
