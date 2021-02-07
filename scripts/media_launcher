@@ -1,20 +1,21 @@
 #!/bin/bash
-media_dir=/mnt/misc-ssd/Anime
-declare -A saved
+set -eou pipefail
 declare -A tracked
 save() {
+        declare -A saved
         for i in $media_dir/*; do
-                saved["${i// /}"]=0
+                title=${i##*/}
+                saved["$title"]=1
         done;
-        for i in ${!saved[@]};do
-                echo -n "$i " >> $HOME/.medialist
+        for i in "${!saved[@]}";do
+                echo -n "${i}|" >> $HOME/.medialist
                 echo ${saved["$i"]} >> $HOME/.medialist
         done
 }
 
 retrieve() {
-        while IFS=' ' read -r title num; do
-                tracked[$title]=$num
+        while IFS='|' read -r title ep; do
+                tracked["$title"]=$ep
         done < $HOME/.medialist
         for title in ${!retrieved[@]}; do
                 echo "$title ${retrieved[$title]}"
@@ -30,7 +31,22 @@ main() {
         mapfile -t media_titles < <(ls $media_dir)
         selected="$(printf '%s\n' "${media_titles[@]}" | rofi -dmenu -i -p "Watch")"
         echo "$selected"
-        find $media_dir/"$selected" -type f -name "*.mkv" | sort -g 
+        ep=$(find $media_dir/"$selected" -type f -name "*.mkv" | sort -g | sed -n ${tracked[$selected]}p)
+        echo $ep
 }
+media_dir=/mnt/misc-ssd/Anime
+mapfile -t media_titles < <(ls $media_dir)
+selected="$(printf '%s\n' "${media_titles[@]}" | rofi -dmenu -i -p "Watch")"
+ep=$(find $media_dir/"$selected" -type f -name "*.mkv" | sort -g)
 
-main "$@"
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
+  DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" # if $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located
+done
+DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
+
+${DIR}/main.py "$selected" "$media_dir"
+
+#main "$@"
