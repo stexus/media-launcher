@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+# ensure sorting is the same between python and helper script
+
 import sys
 from pathlib import Path
 import subprocess
@@ -30,7 +32,9 @@ def get_ep(title):
 
 def get_title(ep):
     #prioritize upper levels when finding
+    #consider not sorting so it's consistent with find
     mkvs = sorted(list(curr_dir.glob('**/*.mkv')))
+    print(mkvs)
     #opening next episode
     return mkvs[ep]
 
