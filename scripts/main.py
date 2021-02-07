@@ -12,7 +12,7 @@ import json
 #media_list = Path.home() / '.medialist'
 medialist = Path.home() / '.medialist.json'
 selected = sys.argv[1]
-media_dir=Path(sys.argv[2])
+curr_dir = Path(sys.argv[2]) / selected
 
 
 def get_ep_number(title):
@@ -24,18 +24,19 @@ def get_ep_number(title):
         #create .medialist in Path.home()
         medialist.touch()
         with medialist.open(mode='w') as jw:
-            json.dump({selected: 1}, jw)
+            # starts at 0; never been opened and complete episode
+            json.dump({selected: 0}, jw)
             return 1
 
-def get_ep_title(ep, dir):
+def get_ep_title(ep):
     #prioritize upper levels when finding
-    curr_dir = media_dir / selected
     mkvs = list(curr_dir.glob('**/*.mkv'))
-    return mkvs[int(ep) - 1]
+    #opening next episode
+    return mkvs[int(ep)]
 
 ep = get_ep_number(selected)
-title = get_ep_title(ep, '')
-subprocess.run(['mpv', title])
+title = get_ep_title(ep)
+subprocess.run([f'mpv \"{title}\"'], cwd=f'/mnt/misc-ssd/Anime/{selected}/', shell=True)
 
 
 
