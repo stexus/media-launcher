@@ -67,7 +67,7 @@ local handle_seek, handle_pause
 local function complete_ep()
     mp.unobserve_property(handle_pause)
     mp.unregister_event(handle_seek)
-    curr_list[title] = curr_list[title] and curr_list[title] + 1 or get_ep_order()
+    curr_list[title] = get_ep_order()
     list.saveTable(media_list, curr_list)
 end
 
