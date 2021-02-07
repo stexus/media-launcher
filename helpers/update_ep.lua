@@ -78,12 +78,8 @@ local function start_timer()
     local threshold = mp.get_property('duration')
     local curr_time = mp.get_property('time-pos')
     threshold = threshold * 0.85 
-    local until_threshold = threshold - curr_time
-    if until_threshold > 0 then
-        timer = mp.add_timeout(until_threshold, complete_ep)
-    else
-        complete_ep()
-    end
+    local until_threshold = math.max(threshold - curr_time, 0)
+    timer = mp.add_timeout(until_threshold, complete_ep)
     mp.msg.info(until_threshold)
 end
 handle_pause = function(_, paused)
