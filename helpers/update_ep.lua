@@ -11,7 +11,6 @@ local title = utils.getcwd():match( "([^/]+)$" )
 -- JSON loading and saving
 local list = {}
 list.saveTable = function(path, v)
-    mp.msg.info(v['Hunter x Hunter'])
     local file = io.open(path, "w")
     local contents = utils.format_json(v)
     file:write(contents)
@@ -62,41 +61,43 @@ local function get_ep_order()
     return 0
 end
 
---increment and write to json when 85% passed or last chapter crossed
+
+
+local handle_seek, handle_pause
 local function complete_ep()
-    if curr_list[title] then
-        curr_list[title] = curr_list[title] + 1
-    else
-        curr_list[title] = get_ep_order()
-    end
-    list.saveTable(media_list, curr_list)
     mp.unobserve_property(handle_pause)
     mp.unregister_event(handle_seek)
+    curr_list[title] = curr_list[title] and curr_list[title] + 1 or get_ep_order()
+    list.saveTable(media_list, curr_list)
 end
 
 local timer
+--increment and write to json when 85% passed or last chapter crossed
 --courtsey of @gim-
 local function start_timer()
     local threshold = mp.get_property('duration')
     local curr_time = mp.get_property('time-pos')
     threshold = threshold * 0.85 
-    local until_threshold = math.max(threshold - curr_time, 0)
-    timer = mp.add_timeout(until_threshold, complete_ep)
+    local until_threshold = threshold - curr_time
+    if until_threshold > 0 then
+        timer = mp.add_timeout(until_threshold, complete_ep)
+    else
+        complete_ep()
+    end
     mp.msg.info(until_threshold)
 end
-
-local function handle_pause(_, paused)
+handle_pause = function(_, paused)
     if paused and timer then
         timer:kill()
+        timer = nil
         mp.msg.info('timer stopped')
     else
         start_timer()
     end
 end
 
-
-local function handle_seek()
-    if timer then timer:kill() end
+handle_seek = function()
+    if timer then timer:kill(); timer = nil end
     start_timer()
 end
 
@@ -104,6 +105,7 @@ end
 
 --prevent nil errors on startup pause property change
 local function file_load()
+    mp.msg.info('file loaded')
     mp.observe_property('pause', 'bool', handle_pause)
     mp.register_event('seek', handle_seek)
 end
