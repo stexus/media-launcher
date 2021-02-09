@@ -4,8 +4,11 @@ local utils = require('mp.utils')
 -- read json file if exists
 --      check folder where media is being played. grab ep and increment
 -- otherwise create one
-local media_list = os.getenv('HOME') .. '/.medialist.json'
+local medialist = os.getenv('HOME') .. '/.medialist.json'
+local mediaDir = '/mnt/misc-ssd/Anime/'
 local dir, title = utils.split_path(utils.getcwd())
+
+
 
 
 -- JSON loading and saving
@@ -32,7 +35,6 @@ list.loadTable = function(path)
 end
 
 
-curr_list = list.loadTable(media_list)
 -- 40149617/split-string-with-specified-delimiter-in-lua
 function split(s, sep)
     local fields = {}
@@ -64,9 +66,11 @@ local function get_ep_order()
     local line
     if result.status == 0 then 
         local sorted = subprocess({'sort'}, result.stdout)
+        mp.msg.info(sorted.stdout)
         line = subprocess({'grep', '-Fn', filename}, sorted.stdout)
     end
     if line.status == 0 then
+        mp.msg.info(line.stdout)
         local end_index = line.stdout:find(':')
         local ep = line.stdout:sub(0, end_index - 1)
         return tonumber(ep)
@@ -75,7 +79,7 @@ local function get_ep_order()
 end
 
 
-local handle_seek, handle_pause, timer
+local handle_seek, handle_pause, timer, curr_list
 local function kill_timer()
     if timer then
         timer:kill()
@@ -93,7 +97,7 @@ local function complete_ep()
     mp.msg.info('episode completed')
     killall()
     curr_list[title] = get_ep_order()
-    list.saveTable(media_list, curr_list)
+    list.saveTable(medialist, curr_list)
 end
 
 --increment and write to json when 85% passed or last chapter crossed
@@ -120,6 +124,8 @@ end
 
 --prevent nil errors on startup pause property change
 local function file_load()
+    if mediaDir ~= dir then return end
+    curr_list = list.loadTable(medialist)
     mp.observe_property('pause', 'bool', handle_pause)
     mp.register_event('seek', handle_seek)
 end
