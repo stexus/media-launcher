@@ -61,7 +61,7 @@ end
 local function get_ep_order()
     -- using mostly bash to be absolutely consistent with python script
     local filename = mp.get_property('filename')
-    local commands = {'find', utils.getcwd(), '-type', 'f', '-name', '*.mkv', '-printf', "%f\n"}
+    local commands = {'find', utils.getcwd(), '-type', 'f', '-name', '*.mkv'}
     local result = subprocess(commands)
     local line
     if result.status == 0 then 
