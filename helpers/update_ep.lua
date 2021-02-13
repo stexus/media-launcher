@@ -5,8 +5,8 @@ local utils = require('mp.utils')
 --      check folder where media is being played. grab ep and increment
 -- otherwise create one
 local medialist = os.getenv('HOME') .. '/.medialist.json'
-local mediaDir = '/mnt/misc%-ssd/Anime/'
-local dir = utils.getcwd():gsub("[%-]", "%%%0")
+local mediaDir = '/mnt/misc-ssd/Anime/'
+local dir = utils.getcwd()
 
 
 
@@ -58,10 +58,12 @@ local function subprocess(command, stdin)
             args = command
         })
 end
+local handle_seek, handle_pause, timer, curr_list, title
 local function get_ep_order()
     -- using mostly bash to be absolutely consistent with python script
     local filename = mp.get_property('filename')
-    local commands = {'find', utils.getcwd(), '-type', 'f', '-name', '*.mkv'}
+    mp.msg.info(mediaDir..title)
+    local commands = {'find', mediaDir..title, '-type', 'f', '-name', '*.mkv'}
     local result = subprocess(commands)
     local line
     if result.status == 0 then 
@@ -79,7 +81,6 @@ local function get_ep_order()
 end
 
 
-local handle_seek, handle_pause, timer, curr_list, title
 local function kill_timer()
     if timer then
         timer:kill()
