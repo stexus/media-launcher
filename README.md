@@ -21,6 +21,8 @@ This script expects a standard layout for media: The folder contains the title w
 
 ### Demo
 
+See a video demo [here](https://streamable.com/s5n9hl)
+
 ### Todo
 
 - Easily handle configuration (currently multiple instances of `mediaDir`; hard to change)
