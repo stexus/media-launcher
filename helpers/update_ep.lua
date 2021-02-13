@@ -123,7 +123,8 @@ end
 
 local function extract_title()
     local subdirs = dir:sub(#mediaDir + 1, #dir)
-    local i, j= string.find(subdirs, '/')
+    local i, j = string.find(subdirs, '/')
+    if not i then return subdirs end
     return subdirs:sub(0, i - 1)
 end
 
