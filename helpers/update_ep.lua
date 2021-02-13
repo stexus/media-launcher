@@ -5,8 +5,8 @@ local utils = require('mp.utils')
 --      check folder where media is being played. grab ep and increment
 -- otherwise create one
 local medialist = os.getenv('HOME') .. '/.medialist.json'
-local mediaDir = '/mnt/misc-ssd/Anime/'
-local dir, title = utils.split_path(utils.getcwd())
+local mediaDir = '/mnt/misc%-ssd/Anime/'
+local dir = utils.getcwd():gsub("[%-]", "%%%0")
 
 
 
@@ -79,7 +79,7 @@ local function get_ep_order()
 end
 
 
-local handle_seek, handle_pause, timer, curr_list
+local handle_seek, handle_pause, timer, curr_list, title
 local function kill_timer()
     if timer then
         timer:kill()
@@ -120,11 +120,19 @@ handle_seek = function()
     start_timer()
 end
 
+local function extract_title()
+    local subdirs = dir:sub(#mediaDir + 1, #dir)
+    local i, j= string.find(subdirs, '/')
+    return subdirs:sub(0, i - 1)
+end
+
 
 
 --prevent nil errors on startup pause property change
 local function file_load()
-    if mediaDir ~= dir then return end
+    if not string.gmatch(dir, mediaDir) then return end
+    title = extract_title()
+    mp.msg.info(title)
     curr_list = list.loadTable(medialist)
     mp.observe_property('pause', 'bool', handle_pause)
     mp.register_event('seek', handle_seek)
