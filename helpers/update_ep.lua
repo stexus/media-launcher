@@ -132,7 +132,7 @@ end
 
 --prevent nil errors on startup pause property change
 local function file_load()
-    if dir:sub(0, #mediaDir - 1) ~= mediaDir then return end
+    if dir:sub(0, #mediaDir) ~= mediaDir then return end
     title = extract_title()
     mp.msg.info(title)
     curr_list = list.loadTable(medialist)
