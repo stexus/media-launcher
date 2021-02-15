@@ -1,10 +1,10 @@
 local utils = require('mp.utils')
 
---json read/write adopted from gist
--- read json file if exists
+--JSON read/write adopted from gist
+-- read JSON file if exists
 --      check folder where media is being played. grab ep and increment
 -- otherwise create one
-local medialist = os.getenv('HOME') .. '/.medialist.json'
+local medialist = os.getenv('HOME') .. '/.medialist.JSON'
 local mediaDir = '/mnt/misc-ssd/Anime/'
 local dir = utils.getcwd()
 
@@ -12,15 +12,15 @@ local dir = utils.getcwd()
 
 
 -- JSON loading and saving
-local list = {}
-list.saveTable = function(path, v)
+local JSON = {}
+JSON.saveTable = function(path, v)
     local file = io.open(path, "w+")
     local contents = utils.format_json(v)
     file:write(contents)
     io.close(file)
 end
 
-list.loadTable = function(path)
+JSON.loadTable = function(path)
     local contents = ""
     local myTable = {}
     local file = io.open(path,"r")
@@ -29,7 +29,7 @@ list.loadTable = function(path)
         myTable = utils.parse_json(contents) or {}
         io.close(file)
     else
-        list.saveTable(path)
+        JSON.saveTable(path)
     end
     return myTable
 end
@@ -59,7 +59,7 @@ local function subprocess(command, stdin)
         })
 end
 local handle_seek, handle_pause, timer, curr_list, title
-local function get_ep_order()
+local function get_ep()
     -- using mostly bash to be absolutely consistent with python script
     local filename = mp.get_property('filename')
     mp.msg.info(mediaDir..title)
@@ -97,12 +97,14 @@ end
 local function complete_ep()
     mp.msg.info('episode completed')
     killall()
-    curr_list[title] = get_ep_order()
-    list.saveTable(medialist, curr_list)
+    curr_list[title] = get_ep()
+    JSON.saveTable(medialist, curr_list)
+    mp.osd_message('Marked completed: '..curr_list[title], 2)
 end
 
---increment and write to json when 85% passed or last chapter crossed
---courtsey of @gim-
+--increment and write to JSON when 85% passed or last chapter crossed
+--last chapter passed (unless before 85%)
+--adapted from @gim-
 local function start_timer()
     local threshold = mp.get_property('duration')
     local curr_time = mp.get_property('time-pos')
@@ -135,12 +137,15 @@ local function file_load()
     if dir:sub(0, #mediaDir) ~= mediaDir then return end
     title = extract_title()
     mp.msg.info(title)
-    curr_list = list.loadTable(medialist)
+    curr_list = JSON.loadTable(medialist)
     mp.observe_property('pause', 'bool', handle_pause)
     mp.register_event('seek', handle_seek)
 end
 
 mp.register_event('file-loaded', file_load)
+--set keybind for setting curr_list[title] to previous ep (script opens current ep)
+
+
 
 
 

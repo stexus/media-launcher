@@ -13,7 +13,6 @@ from natsort import os_sorted
 #given a media name
 
 #check if saved list exists, then read everything into a dictionary (i.e name to ep #)
-#if not, create a new file and import everything from media_dir at 0
 #media_list = Path.home() / '.medialist'
 medialist = Path.home() / '.medialist.json'
 selected = sys.argv[1]
