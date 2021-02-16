@@ -4,7 +4,7 @@ local utils = require('mp.utils')
 -- read JSON file if exists
 --      check folder where media is being played. grab ep and increment
 -- otherwise create one
-local medialist = os.getenv('HOME') .. '/.medialist.JSON'
+local medialist = os.getenv('HOME') .. '/.medialist.json'
 local mediaDir = '/mnt/misc-ssd/Anime/'
 local dir = utils.getcwd()
 
@@ -58,7 +58,8 @@ local function subprocess(command, stdin)
             args = command
         })
 end
-local handle_seek, handle_pause, timer, curr_list, title
+--timer not being killed
+local handle_seek, handle_pause, timer, curr_list, title, curr_ep
 local function get_ep()
     -- using mostly bash to be absolutely consistent with python script
     local filename = mp.get_property('filename')
@@ -94,10 +95,10 @@ local function killall()
     mp.unregister_event(handle_seek)
 end
 
-local function complete_ep()
+local function complete_ep(ep)
     mp.msg.info('episode completed')
     killall()
-    curr_list[title] = get_ep()
+    curr_list[title] = ep or curr_ep
     JSON.saveTable(medialist, curr_list)
     mp.osd_message('Marked completed: '..curr_list[title], 2)
 end
@@ -135,15 +136,18 @@ end
 --prevent nil errors on startup pause property change
 local function file_load()
     if dir:sub(0, #mediaDir) ~= mediaDir then return end
+    --refactor so it doesn't depend on outside variables
     title = extract_title()
-    mp.msg.info(title)
+    curr_ep = get_ep()
     curr_list = JSON.loadTable(medialist)
+    if curr_list[title] and curr_list[title] >= curr_ep then return end
     mp.observe_property('pause', 'bool', handle_pause)
     mp.register_event('seek', handle_seek)
 end
 
 mp.register_event('file-loaded', file_load)
 --set keybind for setting curr_list[title] to previous ep (script opens current ep)
+mp.add_forced_key_binding('ctrl+w', 'set_ep', function() complete_ep(curr_ep - 1) end)
 
 
 
