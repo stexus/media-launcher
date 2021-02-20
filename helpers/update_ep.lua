@@ -1,4 +1,5 @@
 local utils = require('mp.utils')
+local msg = require('mp.msg')
 
 --JSON read/write adopted from gist
 -- read JSON file if exists
@@ -58,22 +59,18 @@ local function subprocess(command, stdin)
             args = command
         })
 end
---timer not being killed
 local handle_seek, handle_pause, timer, curr_list, title, curr_ep
 local function get_ep()
     -- using mostly bash to be absolutely consistent with python script
     local filename = mp.get_property('filename')
-    mp.msg.info(mediaDir..title)
     local commands = {'find', mediaDir..title, '-type', 'f', '-name', '*.mkv'}
     local result = subprocess(commands)
     local line
     if result.status == 0 then 
         local sorted = subprocess({'sort'}, result.stdout)
-        mp.msg.info(sorted.stdout)
         line = subprocess({'grep', '-Fn', filename}, sorted.stdout)
     end
     if line.status == 0 then
-        mp.msg.info(line.stdout)
         local end_index = line.stdout:find(':')
         local ep = line.stdout:sub(0, end_index - 1)
         return tonumber(ep)
@@ -86,7 +83,7 @@ local function kill_timer()
     if timer then
         timer:kill()
         timer = nil
-        mp.msg.info('timer stopped')
+        msg.info('timer stopped')
     end
 end
 local function killall()
@@ -96,11 +93,11 @@ local function killall()
 end
 
 local function complete_ep(ep)
-    mp.msg.info('episode completed')
+    msg.info('episode completed')
     killall()
     curr_list[title] = ep or curr_ep
     JSON.saveTable(medialist, curr_list)
-    mp.osd_message('Marked completed: '..curr_list[title], 2)
+    mp.osd_message('Marked completed: '..curr_list[title], 1)
 end
 
 --increment and write to JSON when 85% passed or last chapter crossed
@@ -112,7 +109,7 @@ local function start_timer()
     threshold = threshold * 0.85 
     local until_threshold = math.max(threshold - curr_time, 0)
     timer = mp.add_timeout(until_threshold, complete_ep)
-    mp.msg.info('time left: ' .. until_threshold)
+    msg.info('time left: ' .. until_threshold)
 end
 handle_pause = function(_, paused)
     if paused then kill_timer()
@@ -120,6 +117,7 @@ handle_pause = function(_, paused)
 end
 
 handle_seek = function()
+    if not timer then return end
     kill_timer()
     start_timer()
 end
@@ -132,22 +130,29 @@ local function extract_title()
 end
 
 
+local function check_initials()
+    title = extract_title()
+    curr_ep = get_ep()
+    curr_list = JSON.loadTable(medialist)
+    if curr_list[title] and curr_list[title] >= curr_ep then return end
+end
+
 
 --prevent nil errors on startup pause property change
 local function file_load()
     if dir:sub(0, #mediaDir) ~= mediaDir then return end
     --refactor so it doesn't depend on outside variables
-    title = extract_title()
-    curr_ep = get_ep()
-    curr_list = JSON.loadTable(medialist)
-    if curr_list[title] and curr_list[title] >= curr_ep then return end
+    check_initials()
+    msg.info(curr_ep .. ":".. curr_list[title])
     mp.observe_property('pause', 'bool', handle_pause)
     mp.register_event('seek', handle_seek)
 end
 
 mp.register_event('file-loaded', file_load)
---set keybind for setting curr_list[title] to previous ep (script opens current ep)
+--mark previous completed
 mp.add_forced_key_binding('ctrl+w', 'set_ep', function() complete_ep(curr_ep - 1) end)
+--mark current completed
+mp.add_forced_key_binding('ctrl+shift+w', 'set_ep', function() complete_ep(curr_ep) end)
 
 
 
