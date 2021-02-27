@@ -5,9 +5,13 @@ local msg = require('mp.msg')
 -- read JSON file if exists
 --      check folder where media is being played. grab ep and increment
 -- otherwise create one
-local curr_list, title, curr_ep
+local curr_list, title, curr_ep 
 local medialist = os.getenv('HOME') .. '/.medialist.json'
-local mediaDir = '/mnt/misc-ssd/Anime/'
+
+--allow for soft links
+local mediadir_name = 'Anime'
+
+--only before init() is run. otherwise set to 'root' media directory
 local dir = utils.getcwd()
 
 
@@ -25,7 +29,7 @@ end
 local function get_ep()
     -- using mostly bash to be absolutely consistent with python script
     local filename = mp.get_property('filename')
-    local commands = {'find', mediaDir..title, '-type', 'f', '-name', '*.mkv'}
+    local commands = {'find', dir..title, '-type', 'f', '-name', '*.mkv'}
     local result = subprocess(commands)
     local line
     if result.status == 0 then 
@@ -40,8 +44,8 @@ local function get_ep()
     return 0
 end
 
-local function extract_title()
-    local subdirs = dir:sub(#mediaDir + 1, #dir)
+local function extract_title(subdirs)
+    msg.info(subdirs)
     local i, j = string.find(subdirs, '/')
     if not i then return subdirs end
     return subdirs:sub(0, i - 1)
@@ -98,6 +102,7 @@ local function complete_ep(ep)
     killall()
     curr_list[title] = ep or curr_ep
     JSON.saveTable(medialist, curr_list)
+    --send api request to anilist
     mp.osd_message('Marked completed: '..curr_list[title], 1)
 end
 -------------------------
@@ -125,17 +130,19 @@ end
 --startup
 
 local function init()
-    title = extract_title()
+    local i, j = string.find(dir, mediadir_name)
+    title = extract_title(dir:sub(j+2, #dir))
+    dir = dir:sub(0, j+1)
     curr_ep = get_ep()
     curr_list = JSON.loadTable(medialist)
+    --set variable to update in anilist
 end
 
 local function file_load()
+    mp.osd_message(dir, 2)
     killall()
-    if dir:sub(0, #mediaDir) ~= mediaDir then return end
+    if string.match(dir, mediadir_name) == nil then return end
     init()
-    --refactor so it doesn't depend on outside variables
-    msg.info(curr_ep .. ":" .. curr_list[title])
     if curr_list[title] and curr_list[title] >= curr_ep then return end
     mp.observe_property('pause', 'bool', handle_pause)
     mp.register_event('seek', handle_seek)
