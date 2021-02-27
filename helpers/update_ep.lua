@@ -1,6 +1,7 @@
 local utils = require('mp.utils')
 local msg = require('mp.msg')
 
+--separate json object with explicitly defined names
 --JSON read/write adopted from gist
 -- read JSON file if exists
 --      check folder where media is being played. grab ep and increment
@@ -45,9 +46,9 @@ local function get_ep()
 end
 
 local function extract_title(subdirs)
-    msg.info(subdirs)
     local i, j = string.find(subdirs, '/')
     if not i then return subdirs end
+    mp.osd_message(subdirs:sub(i + 1, #subdirs), 2)
     return subdirs:sub(0, i - 1)
 end
 ------------------------------------------------------------------
@@ -139,7 +140,6 @@ local function init()
 end
 
 local function file_load()
-    mp.osd_message(dir, 2)
     killall()
     if string.match(dir, mediadir_name) == nil then return end
     init()

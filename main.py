@@ -38,12 +38,11 @@ def get_title(ep):
     mkvs = os_sorted(list(curr_dir.glob('**/*.mkv')))
     print(mkvs)
     #opening next episode
-
     return mkvs[ep]
 
 ep = get_ep(selected)
 title = get_title(ep)
-subprocess.run([f'mpv \"{title}\"'], cwd=f'/mnt/misc-ssd/Anime/{selected}/', shell=True)
+subprocess.run([f'mpv \"{title.name}"'], cwd=title.parent, shell=True)
 
 
 
