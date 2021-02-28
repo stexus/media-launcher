@@ -30,7 +30,7 @@ end
 local function get_ep()
     -- using mostly bash to be absolutely consistent with python script
     local filename = mp.get_property('filename')
-    local commands = {'find', dir..title, '-type', 'f', '-name', '*.mkv'}
+    local commands = {'find', dir..title, '-type', 'l,f', '-name', '*.mkv'}
     local result = subprocess(commands)
     local line
     if result.status == 0 then 
@@ -132,8 +132,10 @@ end
 
 local function init()
     local i, j = string.find(dir, mediadir_name)
-    title = extract_title(dir:sub(j+2, #dir))
-    dir = dir:sub(0, j+1)
+    if title == nil then
+        title = extract_title(dir:sub(j+2, #dir))
+        dir = dir:sub(0, j+1)
+    end
     curr_ep = get_ep()
     curr_list = JSON.loadTable(medialist)
     --set variable to update in anilist
@@ -143,6 +145,7 @@ local function file_load()
     killall()
     if string.match(dir, mediadir_name) == nil then return end
     init()
+    msg.info('directory: '..dir..' | title: ' .. title .. ' | current_ep: ' .. curr_ep)
     if curr_list[title] and curr_list[title] >= curr_ep then return end
     mp.observe_property('pause', 'bool', handle_pause)
     mp.register_event('seek', handle_seek)
