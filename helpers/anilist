@@ -1,23 +1,25 @@
 #!/usr/bin/env python3
 
 import sys
+import os
 import requests
 import json
 import subprocess
 
 from threading import Timer
 #todo:
-#set timer for search so search only happens when stop typing
-#look through rofiftw to see how rofi blocks is used
-#look through rofi blocks examples
+#set timer for search so search only happens when stop typing done
+#look through rofiftw to see how rofi blocks is used done
+#look through rofi blocks examples done
 #set up oauth custom url and queries in this python script (search, mutation)
-#loop through anilist entries in json and determine which series is currently being updated based on episode number
+#(done in lua) loop through anilist entries in json and determine which series is currently being updated based on episode number
 class Anilist:
     def __init__(self):
         self.url = 'https://graphql.anilist.co'
         self.curr_search = {}
         return
-    def search_media(self, input):
+    def search(self, input):
+        if not input or len(input) == 1: return []
         query = '''
             query($search: String) {
                 Page(page: 1, perPage: 7)  {
@@ -50,33 +52,60 @@ class Anilist:
 
     def mutate(self):
         return
-print_bash('{"input action":"send", "prompt":""}')
+class TimerWrapper():
+    def __init__(self):
+        self.timer = None
+
+    #if timer hasn't called cb yet, filter current results instead of doing nothing
+    def start_timer(self, cb):
+        if self.timer:
+            self.timer.cancel()
+        self.timer = Timer(0.5, cb)
+        self.timer.start()
+
+
 
 #rofi blocks doesn't read python's stdout; need to use bash
+def print_bash(msg):
+    subprocess.run([f'echo \'{msg}\''], shell=True)
+
+def format_lines(input):
+    message = {}
+    message['lines'] = [{'text': entry} for entry in input]
+    return json.dumps(message)
+
+def send_lines(lines):
+    msg = format_lines(lines)
+    print_bash(msg)
+
+
 
 api = Anilist()
-timer = None
-for line in sys.stdin:
+timer = TimerWrapper()
+
+import webbrowser
+
+print_bash('{"input action":"send", "prompt":""}')
+def main(line):
     line_json = json.loads(line)
     name = line_json['name']
     value = line_json['value']
     if name == 'input change': 
-        if timer: 
-            timer.cancel()
-        timer = Timer(2, lambda: print_bash(format_lines(api.search_media(json.loads(line)['value']))))
-        timer.start()
+        query = json.loads(line)['value']
+        cb = lambda: send_lines(api.search(query))
+        timer.start_timer(cb)
     elif name == 'select entry':
+        #somehow communicate between lua script
+        #webbrowser.open(f'https://anilist.co/anime/{api.curr_search[value]}')
+        sys.stdout.write(str(api.curr_search[value]))
         print(api.curr_search[value], file=sys.stderr)
+        sys.exit(0)
+
     print(json.loads(line), file=sys.stderr)
 
-
-
-
-#print(escape_string(test_string))
-
-
-
-
-
-
-
+try:
+    for line in sys.stdin:
+        print(line)
+        main(line)
+except Exception as e:
+    print (e, file = sys.stderr)
