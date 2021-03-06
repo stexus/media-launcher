@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+
+import sys
+import requests
+import json
+import subprocess
+
+from threading import Timer
+#todo:
+#set timer for search so search only happens when stop typing
+#look through rofiftw to see how rofi blocks is used
+#look through rofi blocks examples
+#set up oauth custom url and queries in this python script (search, mutation)
+#loop through anilist entries in json and determine which series is currently being updated based on episode number
+class Anilist:
+    def __init__(self):
+        self.url = 'https://graphql.anilist.co'
+        self.curr_search = {}
+        return
+    def search_media(self, input):
+        query = '''
+            query($search: String) {
+                Page(page: 1, perPage: 7)  {
+                    media(search: $search, type: ANIME) {
+                        id
+                        title {
+                            romaji
+                        }
+                    } 
+                }
+            }
+        '''
+        variables = {
+            'search': input
+        }
+        response = requests.post(self.url, json={'query': query, 'variables': variables})
+        titles = self._get_titles(response.json())
+        return titles
+
+    def _get_titles(self, response):
+        self.curr_search = {}
+        media = response['data']['Page']['media']
+        titles = []
+        for entry in media:
+            title = entry['title']['romaji']
+            #for sending to rofiblocks
+            titles.append(title)
+            self.curr_search[title] = entry['id']
+        return titles
+
+    def mutate(self):
+        return
+print_bash('{"input action":"send", "prompt":""}')
+
+#rofi blocks doesn't read python's stdout; need to use bash
+
+api = Anilist()
+timer = None
+for line in sys.stdin:
+    line_json = json.loads(line)
+    name = line_json['name']
+    value = line_json['value']
+    if name == 'input change': 
+        if timer: 
+            timer.cancel()
+        timer = Timer(2, lambda: print_bash(format_lines(api.search_media(json.loads(line)['value']))))
+        timer.start()
+    elif name == 'select entry':
+        print(api.curr_search[value], file=sys.stderr)
+    print(json.loads(line), file=sys.stderr)
+
+
+
+
+#print(escape_string(test_string))
+
+
+
+
+
+
+
