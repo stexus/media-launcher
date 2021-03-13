@@ -3,7 +3,9 @@ set -eou pipefail
 
 
 media_dir=/mnt/misc-ssd/Anime
-mapfile -t media_titles < <(ls $media_dir)
+#assume json list with list sorted by recency
+#mapfile -t media_titles < <(ls $media_dir)
+mapfile -t media_titles < <(recency_ls.py "$media_dir")
 selected="$(printf '%s\n' "${media_titles[@]}" | rofi -dmenu -i -p "")" 
 ep=$(find $media_dir/"$selected" -type f -name "*.mkv" | sort -g)
 
