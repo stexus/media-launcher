@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 
 import sys
-import os
+from pathlib import Path
 import requests
 import json
 import subprocess
-
 from threading import Timer
 #todo:
 #set timer for search so search only happens when stop typing done
@@ -52,6 +51,7 @@ class Anilist:
 
     def mutate(self):
         return
+
 class TimerWrapper():
     def __init__(self):
         self.timer = None
@@ -69,13 +69,18 @@ class TimerWrapper():
 def print_bash(msg):
     subprocess.run([f'echo \'{msg}\''], shell=True)
 
+def escape(text):
+    return text.replace("'", '\"')
+
 def format_lines(input):
     message = {}
-    message['lines'] = [{'text': entry} for entry in input]
+    #blocks doesn't support single quotes
+    message['lines'] = [{'text': escape(entry)} for entry in input]
     return json.dumps(message)
 
 def send_lines(lines):
     msg = format_lines(lines)
+    print(msg, file=sys.stderr)
     print_bash(msg)
 
 
@@ -84,9 +89,10 @@ api = Anilist()
 timer = TimerWrapper()
 
 import webbrowser
+tmp = Path(sys.argv[1]) if len(sys.argv) > 1 else None
 
 print_bash('{"input action":"send", "prompt":""}')
-def main(line):
+def on_line_change(line):
     line_json = json.loads(line)
     name = line_json['name']
     value = line_json['value']
@@ -97,15 +103,13 @@ def main(line):
     elif name == 'select entry':
         #somehow communicate between lua script
         #webbrowser.open(f'https://anilist.co/anime/{api.curr_search[value]}')
-        sys.stdout.write(str(api.curr_search[value]))
-        print(api.curr_search[value], file=sys.stderr)
-        sys.exit(0)
+        id = api.curr_search[value]
+        if tmp:
+            tmp.write_text(str(id))
+        return True
+    return False
 
-    print(json.loads(line), file=sys.stderr)
-
-try:
-    for line in sys.stdin:
-        print(line)
-        main(line)
-except Exception as e:
-    print (e, file = sys.stderr)
+for line in sys.stdin:
+    id = on_line_change(line)
+    if id: 
+        break; 
