@@ -6,11 +6,16 @@ local msg = require('mp.msg')
 -- read JSON file if exists
 --      check folder where media is being played. grab ep and increment
 -- otherwise create one
--- create curr_ep object
+
+-- create curr.ep object
 local curr = {}
-local curr_list, title, curr_ep, curr_id
---local medialist = os.getenv('HOME') .. '/.medialist.json'
-local medialist = '/mnt/misc-ssd/Coding/Projects/media-tracker/medialist.json'
+curr.ep = -1
+curr.list = nil
+curr.id = -1
+-------------------
+
+
+local medialist = os.getenv('HOME') .. '/.medialist.json'
 
 --allow for soft links
 local mediadir_name = 'Anime'
@@ -68,13 +73,14 @@ end
 local function entry_ep(entry) return entry[1] end
 local function entry_id(entry) return entry[2] end
 local function extract_id()
-    local anilist_entries = curr_list['anilist']
+    local anilist_entries = curr.list['anilist']
     local id = -1
+    if not anilist_entries then return id end
     --msg.info(dump(anilist_entries))
     for _, entry in ipairs(anilist_entries[title]) do
         --msg.info(dump(entry))
-        --msg.info(curr_ep)
-        if entry_ep(entry) <= curr_ep then
+        --msg.info(curr.ep)
+        if entry_ep(entry) <= curr.ep then
             id = entry_id(entry)
         end
     end
@@ -90,15 +96,15 @@ local function extract_title(subdirs)
 end
 
 local function add_anilist_entry(id)
-    curr_id = id
-    if not curr_list['anilist'] then curr_list['anilist'] = {} end
-    local anilist_entries = curr_list['anilist']
+    curr.id = id
+    if not curr.list['anilist'] then curr.list['anilist'] = {} end
+    local anilist_entries = curr.list['anilist']
     if not anilist_entries[title] then
         anilist_entries[title] = {}
     end
-    local new_entry = {curr_ep, tonumber(id)}
+    local new_entry = {curr.ep, tonumber(id)}
     for i, entry in ipairs(anilist_entries[title]) do
-        if entry_ep(entry) == curr_ep then
+        if entry_ep(entry) == curr.ep then
             anilist_entries[title][i] = new_entry
             return
         end
@@ -167,27 +173,27 @@ local function killall()
     mp.unregister_event(handle_seek)
 end
 
---may have no parameter, so ep is null. defaults to curr_ep
+--may have no parameter, so ep is null. defaults to curr.ep
 local function complete_ep(ep)
     msg.info('episode completed')
     killall()
-    curr_list[title] = ep or curr_ep
-    JSON.saveTable(medialist, curr_list)
+    curr.list[title] = ep or curr.ep
+    JSON.saveTable(medialist, curr.list)
     --send api request to anilist
-    if curr_id > 0 then
+    if curr.id > 0 then
         --send request
         msg.info('sending request to anilist')
     end
-    mp.osd_message('Marked completed: '..curr_list[title], 1)
+    mp.osd_message('Marked completed: '..curr.list[title], 1)
 end
 -------------------------
 
 Timer.start = function()
     local threshold = mp.get_property('duration')
-    local curr_time = mp.get_property('time-pos')
+    local time_pos = mp.get_property('time-pos')
     threshold = threshold * 0.85 
-    local until_threshold = math.max(threshold - curr_time, 0)
-    Timer.instance = mp.add_timeout(until_threshold, function() complete_ep(curr_ep) end)
+    local until_threshold = math.max(threshold - time_pos, 0)
+    Timer.instance = mp.add_timeout(until_threshold, function() complete_ep(curr.ep) end)
     msg.info('time left: ' .. until_threshold)
 end
 
@@ -210,9 +216,9 @@ local function init()
         title = extract_title(dir:sub(j+2, #dir))
         dir = dir:sub(0, j+1)
     end
-    curr_ep = get_ep()
-    curr_list = JSON.loadTable(medialist)
-    curr_id = extract_id()
+    curr.ep = get_ep()
+    curr.list = JSON.loadTable(medialist)
+    curr.id = extract_id()
     --set variable to update in anilist
 end
 
@@ -220,8 +226,8 @@ local function file_load()
     killall()
     if string.match(dir, mediadir_name) == nil then return end
     init()
-    msg.info('directory: '..dir..' | title: ' .. title .. ' | current_ep: ' .. curr_ep)
-    if curr_list[title] and curr_list[title] >= curr_ep then return end
+    msg.info('directory: '..dir..' | title: ' .. title .. ' | current_ep: ' .. curr.ep)
+    if curr.list[title] and curr.list[title] >= curr.ep then return end
     mp.observe_property('pause', 'bool', handle_pause)
     mp.register_event('seek', handle_seek)
 end
@@ -229,13 +235,13 @@ end
 mp.register_event('file-loaded', file_load)
 --mark previous completed
 mp.add_forced_key_binding('ctrl+w', 'set_ep_prev', function() 
-    complete_ep(curr_ep - 1)
+    complete_ep(curr.ep - 1)
     mp.observe_property('pause', 'bool', handle_pause)
     mp.register_event('seek', handle_seek)
 end)
 
 --mark current completed
-mp.add_forced_key_binding('ctrl+shift+w', 'set_ep_Surr', function() complete_ep(curr_ep) end)
+mp.add_forced_key_binding('ctrl+shift+w', 'set_ep_Surr', function() complete_ep(curr.ep) end)
 mp.add_forced_key_binding('alt+a', 'rofi-blocks', rofi_selection)
 
 
