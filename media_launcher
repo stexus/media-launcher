@@ -3,12 +3,6 @@ set -eou pipefail
 
 
 media_dir=/mnt/misc-ssd/Anime
-#assume json list with list sorted by recency
-#mapfile -t media_titles < <(ls $media_dir)
-mapfile -t media_titles < <(recency_ls.py "$media_dir")
-selected="$(printf '%s\n' "${media_titles[@]}" | rofi -dmenu -i -p "")" 
-ep=$(find $media_dir/"$selected" -type f -name "*.mkv" | sort -g)
-
 SOURCE="${BASH_SOURCE[0]}"
 while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
   DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
@@ -16,7 +10,13 @@ while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symli
   [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" # if $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located
 done
 DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
+#assume json list with list sorted by recency
+#mapfile -t media_titles < <(ls $media_dir)
+mapfile -t media_titles < <(${DIR}/helpers/recency_ls.py "$media_dir")
+selected="$(printf '%s\n' "${media_titles[@]}" | rofi -dmenu -i -p "")" 
+ep=$(find $media_dir/"$selected" -type f -name "*.mkv" | sort -g)
 
-${DIR}/main.py "$selected" "$media_dir"
+
+${DIR}/helpers/launch_selected.py "$selected" "$media_dir"
 
 #main "$@"
