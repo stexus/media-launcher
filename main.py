@@ -29,6 +29,7 @@ def update_recent(rc_list):
 
 def get_ep():
     data = {}
+    mkvs = os_sorted(list(curr_dir.glob('**/*.mkv')))
     try: 
         with medialist.open(mode='r+') as r:
             data = json.load(r)
@@ -36,24 +37,18 @@ def get_ep():
             r.seek(0)
             json.dump(data, r)
             r.truncate()
-        return data[selected]
+        return mkvs[data[selected]]
     except Exception as e:
         print(e)
         with medialist.open(mode='w') as w:
             data[selected] = 0
             json.dump(data, w)
-        return 0
-
-
-def get_title(ep):
-    #prioritize upper levels when finding
-    mkvs = os_sorted(list(curr_dir.glob('**/*.mkv')))
-    #opening next episode
-    return mkvs[ep]
+        return mkvs[0]
 
 ep = get_ep()
-title = get_title(ep)
-subprocess.run([f'mpv \"{title.name}"'], cwd=title.parent, shell=True)
+title = ep.name.replace("'", "\\'")
+
+subprocess.run([f'mpv \'{title}\''], cwd=ep.parent, shell=True)
 
 
 
