@@ -20,6 +20,9 @@ class Anilist:
         self.url = 'https://graphql.anilist.co'
         self.curr_search = {}
         self.token = access_token
+    def create_query(self, queryDict) -> str:
+        return ''
+
     def search(self, input) -> list[str]:
         if not input or len(input) == 1: return []
         query = '''
