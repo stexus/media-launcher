@@ -12,12 +12,15 @@ from threading import Timer
 #look through rofi blocks examples done
 #set up oauth custom url and queries in this python script (search, mutation)
 #(done in lua) loop through anilist entries in json and determine which series is currently being updated based on episode number
+absolute_dir = Path(__file__).absolute()
+sys.path.insert(0, absolute_dir.name)
+from .secrets import access_token
 class Anilist:
     def __init__(self):
         self.url = 'https://graphql.anilist.co'
         self.curr_search = {}
-        return
-    def search(self, input):
+        self.token = access_token
+    def search(self, input) -> list[str]:
         if not input or len(input) == 1: return []
         query = '''
             query($search: String) {
@@ -35,12 +38,15 @@ class Anilist:
             'search': input
         }
         response = requests.post(self.url, json={'query': query, 'variables': variables})
-        titles = self._get_titles(response.json())
+        titles = self._get_titles(response.json()['data']['Page']['media'])
         return titles
 
-    def _get_titles(self, response):
+    def _get_viewer(self) -> int:
+        response = requests.post(self.url, json={'query': '{Viewer {id}}'}, headers={'Authorization': f'Bearer {access_token}'})
+        return response.json()['data']['Viewer']['id']
+
+    def _get_titles(self, media) -> list[str]:
         self.curr_search = {}
-        media = response['data']['Page']['media']
         titles = []
         for entry in media:
             title = entry['title']['romaji']
@@ -49,8 +55,53 @@ class Anilist:
             self.curr_search[title] = entry['id']
         return titles
 
-    def mutate(self):
-        return
+    def _get_list_id(self, mediaId) -> int:
+        return 0
+    
+    def _get_progress(self, viewer, mediaId) -> int:
+        query = '''
+            query($userId: Int, $mediaId: Int) {
+                MediaList(userId: $userId, mediaId: $mediaId, type: ANIME) {
+                    progress
+                    }
+                }
+        '''
+        progress_response = requests.post(self.url, json={'query': query, 'variables': {'userId': viewer, 'mediaId': mediaId}})
+        viewer_progress = progress_response.json()['data']['MediaList']['progress']
+        return viewer_progress
+
+    def _is_complete(self, mediaId, new_progress) -> bool:
+        query = '''
+            query($id: Int) {
+                Media(id: $id, type: ANIME) {
+                    episodes
+                    }
+                }
+        '''
+        #id here is for media, not for list
+        response = requests.post(self.url, json={'query': query, 'variables': {'id': mediaId}})
+        total_ep = response.json()['data']['Media']['episodes']
+        return total_ep <= new_progress 
+
+    def update_entry(self, id):
+        auth_header = {'Authorization': f'Bearer {self.token}'}
+        query = '''
+                mutation ($mediaId: Int, $status: MediaListStatus, $progress: Int) {
+                    SaveMediaListEntry (mediaId: $mediaId, status: $status, progress: $progress) {
+                            id
+                            progress
+                    }
+                }
+        '''
+        viewer = self._get_viewer()
+        new_progress = self._get_progress(viewer, id) + 1
+        variables = {
+            'mediaId': id,
+            'status': 'COMPLETE' if self._is_complete(id, new_progress) else 'CURRENT',
+            'progress': new_progress
+        }
+        response = requests.post(self.url, headers=auth_header, json={'query': query, 'variables': variables})
+        return response.json()
 
 class TimerWrapper():
     def __init__(self):
@@ -82,8 +133,6 @@ def send_lines(lines):
     msg = format_lines(lines)
     print(msg, file=sys.stderr)
     print_bash(msg)
-
-
 
 api = Anilist()
 timer = TimerWrapper()
