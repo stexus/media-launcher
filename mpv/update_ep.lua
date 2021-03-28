@@ -142,7 +142,7 @@ local function parse_saved_entry()
     local anilist_entries = curr.list['anilist']
     local id = -1
     local offset = -1
-    if not anilist_entries then return id end
+    if not anilist_entries or not anilist_entries[curr.title] then return id, offset end
     --msg.info(dump(anilist_entries))
     for _, entry in ipairs(anilist_entries[curr.title]) do
         --msg.info(dump(entry))
@@ -179,6 +179,7 @@ local function add_anilist_entry(id)
         end
     end
     table.insert(anilist_entries[curr.title], new_entry)
+    JSON.saveTable(medialist, curr.list)
     --msg.info(dump(anilist_entries))
 end
 
