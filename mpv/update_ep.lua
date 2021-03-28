@@ -12,6 +12,7 @@ local dir = utils.getcwd()
 local curr = {}
 curr.ep = -1
 curr.id = -1
+curr.offset = -1
 curr.title = nil
 curr.list = nil
 
@@ -37,6 +38,19 @@ JSON.loadTable = function(path)
     return myTable
 end
 
+--todo: clean up parameters
+local function subprocess(command, stdout, stdin)
+    if stdout == nil then
+        stdout = true
+    end
+    return mp.command_native({
+            name = 'subprocess',
+            playback_only = false,
+            capture_stdout = stdout,
+            stdin_data = stdin,
+            args = command
+        })
+end
 -- Timer object
 local Timer = {}
 -- handlers
@@ -66,7 +80,8 @@ Timer.complete = function(ep)
     --send api request to anilist
     if curr.id > 0 then
         --send request
-        msg.info('sending request to anilist')
+        msg.info('sending request to anilist: ' .. curr.id .. '| ep: ' .. curr.ep - curr.offset)
+        subprocess({'update_anilist_entry', tostring(curr.id), tostring(curr.ep - curr.offset)}, true, '')
     end
     mp.osd_message('Marked completed: '..curr.list[curr.title], 1)
 end
@@ -88,19 +103,6 @@ Timer.kill = function()
     end
 end
 
---processing functions--
-local function subprocess(command, stdout, stdin)
-    if stdout == nil then
-        stdout = true
-    end
-    return mp.command_native({
-            name = 'subprocess',
-            playback_only = false,
-            capture_stdout = stdout,
-            stdin_data = stdin,
-            args = command
-        })
-end
 
 local function get_ep()
     -- using mostly bash to be absolutely consistent with python script
@@ -136,9 +138,10 @@ function dump(o)
 end
 local function entry_ep(entry) return entry[1] end
 local function entry_id(entry) return entry[2] end
-local function extract_id()
+local function parse_saved_entry()
     local anilist_entries = curr.list['anilist']
     local id = -1
+    local offset = -1
     if not anilist_entries then return id end
     --msg.info(dump(anilist_entries))
     for _, entry in ipairs(anilist_entries[curr.title]) do
@@ -146,10 +149,11 @@ local function extract_id()
         --msg.info(curr.ep)
         if entry_ep(entry) <= curr.ep then
             id = entry_id(entry)
+            offset = entry_ep(entry) - 1
         end
     end
     --msg.info(entry_id)
-    return id
+    return id, offset
 end
 
 local function extract_title(subdirs)
@@ -161,6 +165,7 @@ end
 
 local function add_anilist_entry(id)
     curr.id = id
+    curr.offset = curr.ep - 1
     if not curr.list['anilist'] then curr.list['anilist'] = {} end
     local anilist_entries = curr.list['anilist']
     if not anilist_entries[curr.title] then
@@ -201,7 +206,7 @@ local function init()
     end
     curr.ep = get_ep()
     curr.list = JSON.loadTable(medialist)
-    curr.id = extract_id()
+    curr.id, curr.offset = parse_saved_entry()
     --set variable to update in anilist
 end
 
