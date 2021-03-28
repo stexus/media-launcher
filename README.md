@@ -2,12 +2,16 @@
 
 Track and launch media.
 
+### Features
+
+Locally tracks episode completion and automatic Anilist updating. Rofi launcher shows shows in most recently played order.
+
 ### Installation
 
 1. Install rofi.
-2. Install dependencies for `main.py`, in this case only [natsort](https://github.com/SethMMorton/natsort)
-3. Place the helper script `update_ep.lua` into the scripts directory of mpv (i.e `~/.config/mpv/scripts`)
-4. Link the `media_launcher` bash script to a folder in PATH. Alternatively, copy both `media_launcher` and `main.py` into a folder in PATH.
+2. Install dependencies ([natsort](https://github.com/SethMMorton/natsort) and [rofi-blocks](https://github.com/OmarCastro/rofi-blocks))
+3. Open `install.sh` and review the `path` and `mpv` variables -- they should correspond to their respective areas in your machine.
+4. Run `install.sh` (`./install.sh`)
 5. Edit `mediaDir` to point to media directory.
 
 ### Usage
@@ -17,7 +21,7 @@ Track and launch media.
 
 ### Configuration
 
-This script expects a standard layout for media: The folder contains the title with media files contained directly in them. It is able to handle subdirectories.
+This script expects a standard layout for media: The folder contains the title with media files contained directly in them. It is able to handle subdirectories. (i.e S1 and S2 subdirectories)
 
 ### Demo
 
