@@ -9,9 +9,10 @@ import requests
 #look through rofi blocks examples done
 #set up oauth custom url and queries in this python script (search, mutation)
 #(done in lua) loop through anilist entries in json and determine which series is currently being updated based on episode number
-#change to symlink
-absolute_dir = Path(__file__).absolute().parent.parent
-sys.path.insert(0, absolute_dir.name)
+
+#change to symlink; shouldn't be necessary because this isn't called anymore
+parent_dir = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(parent_dir))
 from helpers.secrets import access_token
 class Anilist:
     def __init__(self):
@@ -21,6 +22,11 @@ class Anilist:
     def create_query(self, queryDict) -> str:
         return ''
 
+    def _valid_response(self, json) -> bool:
+        if 'errors' in json:
+            print(json)
+            return False
+        return True
     def search(self, input) -> list[str]:
         if not input or len(input) == 1: return []
         query = '''
@@ -56,9 +62,6 @@ class Anilist:
             self.curr_search[title] = entry['id']
         return titles
 
-    def _get_list_id(self, mediaId) -> int:
-        return 0
-    
     def _get_progress(self, viewer, mediaId) -> int:
         query = '''
             query($userId: Int, $mediaId: Int) {
@@ -68,8 +71,13 @@ class Anilist:
                 }
         '''
         progress_response = requests.post(self.url, json={'query': query, 'variables': {'userId': viewer, 'mediaId': mediaId}})
-        viewer_progress = progress_response.json()['data']['MediaList']['progress']
-        return viewer_progress
+        progress_response_json = progress_response.json()
+
+        print(progress_response_json)
+        if not self._valid_response(progress_response_json):
+            #zero current progress
+            return 0
+        return progress_response_json['data']['MediaList']['progress']
 
     def _is_complete(self, mediaId, new_progress) -> bool:
         query = '''
@@ -84,7 +92,10 @@ class Anilist:
         total_ep = response.json()['data']['Media']['episodes']
         return total_ep <= new_progress 
 
-    def update_entry(self, id):
+    def update_entry(self, id, episode=-1):
+        #coming from command line as strings
+        id = int(id)
+        episode = int(episode)
         auth_header = {'Authorization': f'Bearer {self.token}'}
         query = '''
                 mutation ($mediaId: Int, $status: MediaListStatus, $progress: Int) {
@@ -95,12 +106,15 @@ class Anilist:
                 }
         '''
         viewer = self._get_viewer()
-        new_progress = self._get_progress(viewer, id) + 1
+        #seeing if user input is reliable enough before falling back on increments of 1
+        #new_progress = self._get_progress(viewer, id) + 1
+        if episode < 0:
+            episode = self._get_progress(viewer, id) + 1
         variables = {
             'mediaId': id,
-            'status': 'COMPLETE' if self._is_complete(id, new_progress) else 'CURRENT',
-            'progress': new_progress
+            'status': 'COMPLETE' if self._is_complete(id, episode) else 'CURRENT',
+            'progress': episode
         }
         response = requests.post(self.url, headers=auth_header, json={'query': query, 'variables': variables})
-        return response.json()
+        return response.json()['data']['SaveMediaListEntry']['progress']
 
