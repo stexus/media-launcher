@@ -22,6 +22,10 @@ class TestAnilistAPI(unittest.TestCase):
     def test_add_entry(self):
         horimiya = 124080
         self.assertEqual(api.update_entry(horimiya), 1)
+    def test_complete_series(self):
+        tonikawa = 116267
+        self.assertEqual(api.update_entry(tonikawa, 12), 12)
+
 
         
 if __name__ == '__main__':
