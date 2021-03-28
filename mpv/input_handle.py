@@ -5,8 +5,7 @@ import json
 import subprocess
 from threading import Timer
 #hacky way to import stuff
-parent_dir = Path(__file__).absolute().parent.parent
-print(parent_dir, file=sys.stderr)
+parent_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(parent_dir))
 from helpers.anilist import Anilist
 class TimerWrapper():

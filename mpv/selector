@@ -1,3 +1,3 @@
 #!/bin/bash
-rofi -modi blocks -show blocks -blocks-wrap "anilist $@"
+rofi -modi blocks -show blocks -blocks-wrap "input_handle $@"
 
