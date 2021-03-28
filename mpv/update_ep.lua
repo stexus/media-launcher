@@ -73,15 +73,16 @@ end
 
 --may have no parameter, so ep is null. defaults to curr.ep
 Timer.complete = function(ep)
+    if not ep then ep = curr.ep end
     msg.info('episode completed')
     Timer.nuke()
-    curr.list[curr.title] = ep or curr.ep
+    curr.list[curr.title] = ep
     JSON.saveTable(medialist, curr.list)
     --send api request to anilist
     if curr.id > 0 then
         --send request
-        msg.info('sending request to anilist: ' .. curr.id .. '| ep: ' .. curr.ep - curr.offset)
-        subprocess({'update_anilist_entry', tostring(curr.id), tostring(curr.ep - curr.offset)}, true, '')
+        msg.info('sending request to anilist: ' .. curr.id .. '| ep: ' .. ep - curr.offset)
+        subprocess({'update_anilist_entry', tostring(curr.id), tostring(ep - curr.offset)}, true, '')
     end
     mp.osd_message('Marked completed: '..curr.list[curr.title], 1)
 end

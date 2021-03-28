@@ -112,9 +112,10 @@ class Anilist:
             episode = self._get_progress(viewer, id) + 1
         variables = {
             'mediaId': id,
-            'status': 'COMPLETE' if self._is_complete(id, episode) else 'CURRENT',
+            'status': 'COMPLETED' if self._is_complete(id, episode) else 'CURRENT',
             'progress': episode
         }
         response = requests.post(self.url, headers=auth_header, json={'query': query, 'variables': variables})
+        print(response.json())
         return response.json()['data']['SaveMediaListEntry']['progress']
 
