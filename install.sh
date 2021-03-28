@@ -6,11 +6,14 @@ mpv_dir="$HOME/.config/mpv/scripts"
 
 ln_path() {
   for f in "$@"; do
-    ln -s "${dir}/${f}" $path
+    stripped=${f##*/}
+    ln -s "${dir}/${f}" ${path}${stripped%.*}
   done
 }
 
-ln_path "media_launcher" "main.py" "helpers/recency_ls.py" 
-ln -s "${dir}/helpers/update_ep.lua" $mpv_dir
+
+ln_path "media_launcher" "helpers/launch_selected.py" "mpv/selector"\
+  "mpv/input_handle.py" "mpv/update_anilist_entry.py"
+ln -s "${dir}/mpv/update_ep.lua" $mpv_dir
 
 
