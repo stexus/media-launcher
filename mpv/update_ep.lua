@@ -79,12 +79,14 @@ Timer.complete = function(ep)
     curr.list[curr.title] = ep
     JSON.saveTable(medialist, curr.list)
     --send api request to anilist
+    mp.osd_message('Marked completed: '..curr.list[curr.title], 1)
     if curr.id > 0 then
         --send request
-        msg.info('sending request to anilist: ' .. curr.id .. '| ep: ' .. ep - curr.offset)
-        subprocess({'update_anilist_entry', tostring(curr.id), tostring(ep - curr.offset)}, true, '')
+        local anilist_ep = ep - curr.offset
+        msg.info('sending request to anilist: ' .. curr.id .. '| ep: ' .. anilist_ep)
+        subprocess({'update_anilist_entry', tostring(curr.id), tostring(anilist_ep)}, true, '')
+        mp.osd_message('Marked anilist: '..tostring(anilist_ep), 1)
     end
-    mp.osd_message('Marked completed: '..curr.list[curr.title], 1)
 end
 
 Timer.start = function()
