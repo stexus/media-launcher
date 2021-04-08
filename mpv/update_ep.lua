@@ -192,6 +192,7 @@ local function rofi_selection()
         local id = tmp:read('*a')
         io.close(tmp)
         os.remove(tmp_name)
+        if id == '' then return end
         add_anilist_entry(tonumber(id))
     end
 end
