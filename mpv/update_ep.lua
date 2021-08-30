@@ -178,6 +178,7 @@ local function add_anilist_entry(id)
     for i, entry in ipairs(anilist_entries[curr.title]) do
         if entry_ep(entry) == curr.ep then
             anilist_entries[curr.title][i] = new_entry
+            JSON.saveTable(medialist, curr.list)
             return
         end
     end
